@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"runtime"
 	"time"
 
 	"github.com/gorilla/mux"
-
 	_ "github.com/heroku/x/hmetrics/onload"
+
 )
 
 const (
@@ -24,7 +25,7 @@ var (
 
 func main() {
 
-	runtime.GOMAXPROCS(2)
+	runtime.GOMAXPROCS(1)
 
 	port := os.Getenv("PORT")
 	//port := "8085"
