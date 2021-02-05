@@ -1,16 +1,15 @@
 package main
 
+//
 import (
 	"bytes"
 	"encoding/json"
 	"log"
 	"net/http"
-	"os"
 	"runtime"
 	"time"
 
 	"github.com/gorilla/mux"
-	_ "github.com/heroku/x/hmetrics/onload"
 
 )
 
@@ -27,34 +26,19 @@ func main() {
 
 	runtime.GOMAXPROCS(1)
 
-	port := os.Getenv("PORT")
-	//port := "8085"
-
-	if port == "" {
-		log.Fatal("$PORT must be set")
-	}
-
-	/*
-		router := gin.New()
-		router.Use(gin.Logger())
-		router.LoadHTMLGlob("templates/*.tmpl.html")
-		router.Static("/static", "static")
-
-		router.GET("/", func(c *gin.Context) {
-			c.HTML(http.StatusOK, "index.tmpl.html", nil)
-		})
-
-		router.Run(":" + port)
-
-	*/
-
 	r := mux.NewRouter()
 
+	r.HandleFunc("/", HelloUapay).Methods("GET")
 	r.HandleFunc("/create/session", createSession).Methods("GET")
 	r.HandleFunc("/create/invoce", createInvoce).Methods("POST")
 
-	log.Fatal(http.ListenAndServe(":"+port, r))
+	log.Fatal(http.ListenAndServe(":5000", r))
 
+}
+
+func HelloUapay(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode("Hello Uapay")
 }
 
 func createSession(w http.ResponseWriter, r *http.Request) {
@@ -150,7 +134,7 @@ func createInvoce(w http.ResponseWriter, r *http.Request) {
 	var resultInvoice map[string]interface{}
 
 	// Decode result
-	//json.NewDecoder(resp.Body).Decode(&resultInvoice)
+	json.NewDecoder(resp.Body).Decode(&resultInvoice)
 
 	// map resultInvoice data
 	var paymentPageUrl = resultInvoice["data"].(map[string]interface{})
