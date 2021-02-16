@@ -1,6 +1,5 @@
 package main
 
-//
 import (
 	"bytes"
 	"encoding/json"
@@ -29,9 +28,12 @@ func main() {
 
 	r := mux.NewRouter()
 
-	r.HandleFunc("/", HelloUapay).Methods("GET")
-	r.HandleFunc("/create/session", createSession).Methods("GET")
-	r.HandleFunc("/create/invoce", createInvoce).Methods("POST")
+	// r.HandleFunc("/", HelloUapay).Methods("GET")
+
+	r.HandleFunc("/demo/create/session", DemoCreateSession).Methods("GET")
+	r.HandleFunc("/create/session", CreateSession).Methods("GET")
+	r.HandleFunc("/demo/create/invoce", DemoCreateInvoce).Methods("POST")
+	r.HandleFunc("/create/invoce", CreateInvoce).Methods("POST")
 
 	log.Fatal(http.ListenAndServe(":5000", r))
 
@@ -44,7 +46,56 @@ func getUnixTime() int64 {
 	return uTime
 }
 
-func HelloUapay(w http.ResponseWriter, r *http.Request) {
+/*
+
+{
+    "amount": 1000,
+    "description": "Some book"
+}
+*/
+
+func DemoCreateSession(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	iat := getUnixTime()
+
+	message := map[string]interface{}{
+		"params": map[string]string{
+			"clientId": "6412",
+		},
+		"iat":   iat,
+		"token": "eyJwYXJhbXMiOnsiY2xpZW50SWQiOiI2NDEyIn0sImlhdCI6MTYxMTc0MTk1NSwiYWxnIjoiSFMyNTYifQ.e30.iddIJYnbLyq2pvNAdQGUxI1e4IQ_xu7U169gWiRv4EA",
+	}
+
+	bytesRepresentation, err := json.Marshal(message)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	resp, err := http.Post(sessionURL, "application/json", bytes.NewBuffer(bytesRepresentation))
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	// map resp.Body
+	var result map[string]interface{}
+
+	// Decode result
+	json.NewDecoder(resp.Body).Decode(&result)
+
+	// map inside resp.Body Data object
+	var data = result["data"].(map[string]interface{})
+
+	log.Println(result["status"])
+	log.Println(data["id"])
+
+	json.NewEncoder(w).Encode(data["id"])
+
+	sessionId = data["id"].(string)
+
+}
+
+func CreateSession(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	iat := getUnixTime()
@@ -137,55 +188,7 @@ func HelloUapay(w http.ResponseWriter, r *http.Request) {
 	sessionId = claims.Id
 }
 
-func createSession(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	iat := getUnixTime()
-
-	message := map[string]interface{}{
-		"params": map[string]string{
-			"clientId": "6412",
-		},
-		"iat":   iat,
-		"token": "eyJwYXJhbXMiOnsiY2xpZW50SWQiOiI2NDEyIn0sImlhdCI6MTYxMTc0MTk1NSwiYWxnIjoiSFMyNTYifQ.e30.iddIJYnbLyq2pvNAdQGUxI1e4IQ_xu7U169gWiRv4EA",
-	}
-
-	bytesRepresentation, err := json.Marshal(message)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	resp, err := http.Post(sessionURL, "application/json", bytes.NewBuffer(bytesRepresentation))
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	// map resp.Body
-	var result map[string]interface{}
-
-	// Decode result
-	json.NewDecoder(resp.Body).Decode(&result)
-
-	// map inside resp.Body Data object
-	var data = result["data"].(map[string]interface{})
-
-	log.Println(result["status"])
-	log.Println(data["id"])
-
-	json.NewEncoder(w).Encode(data["id"])
-
-	sessionId = data["id"].(string)
-
-}
-
-/*
-{
-    "amount": 1000,
-    "description": "Some book"
-}
-*/
-
-func createInvoce(w http.ResponseWriter, r *http.Request) {
+func DemoCreateInvoce(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	var invoiceData map[string]interface{}
@@ -243,5 +246,146 @@ func createInvoce(w http.ResponseWriter, r *http.Request) {
 
 	//json.NewEncoder(w).Encode(resultInvoice)
 	json.NewEncoder(w).Encode(paymentPageUrl["paymentPageUrl"])
+
+}
+
+/*
+{
+    "description": "Some new book 12",
+	"amount": 400077
+}
+*/
+
+// Create Invoce with key
+
+func CreateInvoce(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var invoiceData map[string]interface{}
+	json.NewDecoder(r.Body).Decode(&invoiceData)
+
+	// json.NewEncoder(w).Encode(invoiceData)
+	// json.NewEncoder(w).Encode(invoiceData["description"])
+
+	// geting values amount, description from posts
+	var description = invoiceData["description"]
+	var amount = invoiceData["amount"]
+
+	//currentTime := time.Now().Unix()
+	currentTime := time.Now()
+	var externalId string = currentTime.String()
+
+	iat := getUnixTime()
+
+	// Token jwt Standard Claim Object
+
+	type params struct {
+		SessionId  string `json:"sessionId"`
+		SystemType string `json:"systemType"`
+	}
+
+	type data struct {
+		ExternalId  string  `json:"externalId"`
+		Description string  `json:"description"`
+		Amount      float64 `json:"amount"`
+		RedirectUrl string  `json:"redirectUrl"`
+		Type        string  `json:"type"`
+		ExtraInfo   string  `json:"extraInfo"`
+	}
+
+	type InvoceToken struct {
+		Params params `json:"params"`
+		Data   data   `json:"data"`
+		Iat    int64  `json:"iat"`
+		Token  string `json:"token"`
+		jwt.StandardClaims
+	}
+
+	var InvoceTokenClaim = InvoceToken{
+		Params: params{
+			SessionId:  sessionId,
+			SystemType: "ECOM",
+		},
+		Data: data{
+			ExternalId:  externalId,
+			Description: description.(string),
+			Amount:      amount.(float64),
+			RedirectUrl: "https://uapay.ua",
+			Type:        "PAY",
+			ExtraInfo:   "{\"phoneFrom\":\"380971112233\",\"phoneTo\":\"380631112233\",\"cardToId\":\"216f8390-9abc-428d-89d6-7be50183afb5\"}",
+		},
+		Iat:            iat,
+		StandardClaims: jwt.StandardClaims{
+			// Enter expiration in milisecond
+			// ExpiresAt: time.Now().Add(10 * time.Minute).Unix(),
+		},
+	}
+
+	// Create a new claim with HS256 algorithm and token claim
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, InvoceTokenClaim)
+
+	tokenString, err := token.SignedString(jwtKey)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	invoiceMessage := map[string]interface{}{
+		"params": map[string]string{
+			"sessionId":  sessionId,
+			"systemType": "ECOM",
+		},
+		"data": map[string]interface{}{
+			"externalId":  externalId,
+			"description": description,
+			"amount":      amount,
+			"redirectUrl": "https://uapay.ua",
+			"type":        "PAY",
+			"extraInfo":   "{\"phoneFrom\":\"380971112233\",\"phoneTo\":\"380631112233\",\"cardToId\":\"216f8390-9abc-428d-89d6-7be50183afb5\"}",
+		},
+		"iat":   iat,
+		"token": tokenString,
+	}
+
+	bytesRepresentationInvoice, err := json.Marshal(invoiceMessage)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	resp, err := http.Post(createInvoiceUrl, "application/json", bytes.NewBuffer(bytesRepresentationInvoice))
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	var resultInvoice map[string]interface{}
+
+	// Decode result
+	json.NewDecoder(resp.Body).Decode(&resultInvoice)
+
+	var dataInvoceToken = resultInvoice["data"].(map[string]interface{})
+
+	//json.NewEncoder(w).Encode(resultInvoice)
+	// json.NewEncoder(w).Encode(dataInvoceToken["token"])
+
+	var invoceTokenString = dataInvoceToken["token"].(string)
+
+	type InvoiceRespClaims struct {
+		Id               string `json:"id"`
+		PaymentPageUrl   string `json:"paymentPageUrl"`
+		PaymentPageUrlQR string `json:"paymentPageUrlQR"`
+		Iat              string `json:"iat"`
+		jwt.StandardClaims
+	}
+
+	decodeToken, err := jwt.ParseWithClaims(
+		invoceTokenString,
+		&InvoiceRespClaims{},
+		func(decodeToken *jwt.Token) (interface{}, error) {
+			return []byte(jwtKey), nil
+		},
+	)
+
+	claims := decodeToken.Claims.(*InvoiceRespClaims)
+	json.NewEncoder(w).Encode(claims.PaymentPageUrl)
 
 }
