@@ -29,7 +29,7 @@ func main() {
 	r := mux.NewRouter()
 
 	// r.HandleFunc("/", HelloUapay).Methods("GET")
-
+	r.HandleFunc("/", TestFunc).Methods("GET")
 	r.HandleFunc("/demo/create/session", DemoCreateSession).Methods("GET")
 	r.HandleFunc("/create/session", CreateSession).Methods("GET")
 	r.HandleFunc("/demo/create/invoce", DemoCreateInvoce).Methods("POST")
@@ -37,6 +37,12 @@ func main() {
 
 	log.Fatal(http.ListenAndServe(":5000", r))
 
+}
+
+func TestFunc(w http.ResponseWriter, r *http.Request) {
+	var hello string = "Hello GO"
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(hello)
 }
 
 func getUnixTime() int64 {
