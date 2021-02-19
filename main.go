@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"runtime"
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
@@ -27,11 +26,12 @@ func main() {
 
 	port := os.Getenv("PORT")
 
-	if port == "" {
-		log.Fatal("$PORT must be set")
-	}
+	/*	if port == "" {
+			log.Fatal("$PORT must be set")
+		}
+	*/
 
-	runtime.GOMAXPROCS(1)
+	// runtime.GOMAXPROCS(1)
 
 	r := mux.NewRouter()
 
