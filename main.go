@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"runtime"
 	"time"
 
@@ -24,6 +25,12 @@ var (
 
 func main() {
 
+	port := os.Getenv("PORT")
+
+	if port == "" {
+		log.Fatal("$PORT must be set")
+	}
+
 	runtime.GOMAXPROCS(1)
 
 	r := mux.NewRouter()
@@ -35,7 +42,7 @@ func main() {
 	r.HandleFunc("/demo/create/invoce", DemoCreateInvoce).Methods("POST")
 	r.HandleFunc("/create/invoce", CreateInvoce).Methods("POST")
 
-	log.Fatal(http.ListenAndServe(":5000", r))
+	log.Fatal(http.ListenAndServe(":"+port, r))
 
 }
 
