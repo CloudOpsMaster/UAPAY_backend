@@ -3,4 +3,4 @@ build:
     - go
 
 run:
-  web: go-getting-started
+  web: UAPAY_backend
